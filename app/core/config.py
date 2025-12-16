@@ -7,7 +7,13 @@ class Settings(BaseSettings):
 
     # MongoDB settings
     mongodb_uri: str
-    database_name: str = "api-test-v2"
+    database_name: str
+
+    # JWT settings
+    secret_key: str
+    algorithm: str
+    access_token_expire_minutes: int
+    refresh_token_expire_days: int
 
     class Config:
         env_file = ".env"

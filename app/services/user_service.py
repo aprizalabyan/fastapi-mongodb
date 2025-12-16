@@ -2,7 +2,8 @@ from typing import List, Optional
 from datetime import datetime, timezone
 from bson import ObjectId
 
-from app.schemas.user import UserCreate, UserRead, UserUpdate
+from app.schemas.user import UserCreate, UserRead, UserUpdate, UserInDB
+from app.services.auth_service import AuthService
 
 
 class UserService:
@@ -25,6 +26,10 @@ class UserService:
         """Insert new user into MongoDB and add timestamps."""
         now = datetime.now(timezone.utc)
         data = payload.model_dump()
+
+        # Hash password before storing
+        data["hashed_password"] = AuthService.get_password_hash(data.pop("password"))
+
         data["createdAt"] = now
         data["updatedAt"] = now
         result = await self.db[self.collection_name].insert_one(data)
@@ -42,6 +47,22 @@ class UserService:
         if doc:
             return self._doc_to_user_read(doc)
         return None
+
+    async def get_user_by_email(self, email: str) -> Optional[UserInDB]:
+        """Fetch user by email for authentication."""
+        doc = await self.db[self.collection_name].find_one({"email": email})
+        if doc:
+            return UserInDB(**doc)
+        return None
+
+    async def authenticate_user(self, email: str, password: str) -> Optional[UserInDB]:
+        """Authenticate user with email and password."""
+        user = await self.get_user_by_email(email)
+        if not user:
+            return None
+        if not AuthService.verify_password(password, user.hashed_password):
+            return None
+        return user
 
     async def delete_user(self, user_id: str) -> bool:
         """Delete a user by ID. Returns True if deleted."""
