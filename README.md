@@ -1,114 +1,131 @@
-# FastAPI - Base Project (Modular) with Authentication
+# Product Review API - FastAPI + MongoDB
 
-This is a minimal base project structure for a scalable FastAPI application organized per-module with JWT authentication.
+A simple REST API for product reviews built with FastAPI, MongoDB, and JWT authentication. Users can register, login, and manage products with review functionality.
+
+## Features
+
+- 🔐 **JWT Authentication** - Secure login with access and refresh tokens
+- 👤 **User Management** - User registration and profile management
+- 📦 **Product Management** - CRUD operations for products
+- ⭐ **Review System** - Product reviews and ratings
+- 📊 **MongoDB Integration** - NoSQL database for flexible data storage
+- 📚 **Auto-generated API Docs** - Interactive Swagger UI documentation
+
+## Tech Stack
+
+- **Backend**: FastAPI (Python async web framework)
+- **Database**: MongoDB with Motor (async driver)
+- **Authentication**: JWT tokens with bcrypt password hashing
+- **Validation**: Pydantic models
+- **Documentation**: OpenAPI/Swagger UI
 
 ## Setup
 
-1. Copy environment file:
+### Prerequisites
+
+- Python 3.8+
+- MongoDB (local or cloud instance)
+
+### Installation
+
+1. **Clone the repository:**
 ```bash
-cp .env.example .env
+git clone <repository-url>
+cd fastapi-mongodb
 ```
 
-2. Install dependencies:
+2. **Create virtual environment:**
+```bash
+python -m venv env
+source env/bin/activate  # On Windows: env\Scripts\activate
+```
+
+3. **Install dependencies:**
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Start MongoDB (local or Docker):
+4. **Environment configuration:**
+```bash
+cp .env.example .env
+# Edit .env with your MongoDB URI and JWT settings
+```
+
+5. **Start MongoDB:**
 ```bash
 # Using Docker
 docker run -d -p 27017:27017 --name mongodb mongo:latest
 
-# Or install MongoDB locally
+# Or using local MongoDB installation
+mongod
 ```
 
-4. Run the application:
+6. **Run the application:**
 ```bash
 uvicorn app.main:app --reload
 ```
 
-5. Access API docs: http://127.0.0.1:8000/docs
+7. **Access API documentation:**
+   - Swagger UI: http://127.0.0.1:8000/docs
+   - ReDoc: http://127.0.0.1:8000/redoc
 
-## Authentication Flow
+## API Endpoints
 
-### 1. Register User
-```bash
-POST /api/v1/users/
-{
-  "email": "user@example.com",
-  "password": "password123",
-  "name": "User Name"
-}
-```
+### Authentication
+- `POST /api/v1/auth/login` - User login
+- `POST /api/v1/auth/refresh` - Refresh access token
 
-### 2. Login
-```bash
-POST /api/v1/auth/login
-Content-Type: application/json
+### Users
+- `POST /api/v1/users/` - Register new user
+- `GET /api/v1/users/` - List all users (authenticated)
+- `GET /api/v1/users/{user_id}` - Get user details (authenticated)
+- `PUT /api/v1/users/{user_id}` - Update user (authenticated)
+- `DELETE /api/v1/users/{user_id}` - Delete user (authenticated)
 
-{
-  "email": "user@example.com",
-  "password": "password123"
-}
-```
+### Products
+- `POST /api/v1/products/` - Add product
+- `GET /api/v1/products/` - List products
+- `GET /api/v1/products/{product_id}` - Get product details
+- `PUT /api/v1/products/{product_id}` - Update product
+- `DELETE /api/v1/products/{product_id}` - Delete product
 
-Response:
-```json
-{
-  "access_token": "eyJ...",
-  "refresh_token": "eyJ...",
-  "token_type": "bearer"
-}
-```
-
-### 3. Use Protected Endpoints
-
-#### Option A: Manual API calls
-Include the access token in Authorization header:
-```
-Authorization: Bearer eyJ...
-```
-
-#### Option B: Swagger UI Authorization
-1. Go to http://127.0.0.1:8000/docs
-2. Click the **"Authorize"** button (lock icon) at the top
-3. In the "Value" field, enter just the token string: `eyJ...` (without "Bearer " prefix)
-4. Click **"Authorize"**
-5. Now all protected endpoints will automatically include the token
-
-### 4. Refresh Token
-```bash
-POST /api/v1/auth/refresh
-{
-  "refresh_token": "eyJ..."
-}
-```
-
-## Project Structure
-
-- `app/main.py`: application factory / entrypoint
-- `app/api/v1/auth.py`: authentication endpoints (login, refresh)
-- `app/api/v1/users.py`: user CRUD endpoints (protected)
-- `app/schemas/`: pydantic models (user, auth)
-- `app/services/`: business logic (user service, auth service)
-- `app/db/`: MongoDB connection setup
-- `app/core/config.py`: JWT and DB configuration
-- `app/api/deps.py`: database dependency injection
+### Reviews (Coming Soon)
+- `POST /api/v1/products/{product_id}/reviews` - Add review
+- `GET /api/v1/products/{product_id}/reviews` - Get product reviews
+- `PUT /api/v1/reviews/{review_id}` - Update review
+- `DELETE /api/v1/reviews/{review_id}` - Delete review
 
 ## Security Features
 
-- Password hashing with bcrypt
-- JWT access tokens (60 min expiry)
-- JWT refresh tokens (7 days expiry)
-- Protected routes with Bearer token authentication
-- User registration without authentication
-- All user operations require authentication
+- 🔒 **Password Hashing**: bcrypt for secure password storage
+- 🎫 **JWT Tokens**: Access tokens (30 min) and refresh tokens (7 days)
+- 🛡️ **Protected Routes**: Bearer token authentication required
+- 🔐 **Secure Registration**: Password validation and hashing
+- 🚫 **Unauthorized Access Prevention**: Token validation on all protected endpoints
 
-## Next Steps
+## Development
 
-- Add role-based authorization
-- Implement password reset functionality
-- Add email verification
-- Add rate limiting
-- Add comprehensive tests
-- Add CI/CD pipeline
+### API Documentation
+- **Swagger UI**: http://127.0.0.1:8000/docs
+- **ReDoc**: http://127.0.0.1:8000/redoc
+- **OpenAPI JSON**: http://127.0.0.1:8000/openapi.json
+
+## Environment Variables
+
+Create a `.env` file based on `.env.example`:
+
+```env
+# MongoDB Configuration
+MONGODB_URI=mongodb://localhost:27017
+DATABASE_NAME=product_review_db
+
+# JWT Configuration
+SECRET_KEY=your-super-secret-key-change-this-in-production
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+REFRESH_TOKEN_EXPIRE_DAYS=7
+```
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.

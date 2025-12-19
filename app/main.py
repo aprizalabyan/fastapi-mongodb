@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from app.core.config import Settings
 from app.api.v1 import users as users_router
 from app.api.v1 import auth as auth_router
+from app.api.v1 import products as product_router
 from app.db import connect_to_db, close_db_connection
 
 settings = Settings()
@@ -27,6 +28,7 @@ app = FastAPI(title=settings.app_name, lifespan=lifespan)
 
 app.include_router(auth_router.router, prefix=settings.api_v1_prefix, tags=["auth"])
 app.include_router(users_router.router, prefix=settings.api_v1_prefix, tags=["users"])
+app.include_router(product_router.router, prefix=settings.api_v1_prefix, tags=["products"])
 
 
 @app.get("/")

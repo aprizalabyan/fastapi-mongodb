@@ -2,7 +2,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    app_name: str = "FastAPI Base Project"
+    app_name: str = "Product Review API"
     api_v1_prefix: str = "/api/v1"
 
     # MongoDB settings
