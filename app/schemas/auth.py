@@ -15,6 +15,8 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     email: Optional[str] = None
+    id: Optional[str] = None
+    name: Optional[str] = None
 
 
 class UserCreateWithPassword(BaseModel):

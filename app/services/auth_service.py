@@ -61,10 +61,12 @@ class AuthService:
                 token, settings.secret_key, algorithms=[settings.algorithm]
             )
             email: str = payload.get("sub")
+            user_id: str = payload.get("user_id")
+            user_name: str = payload.get("user_name")
             token_type_in_payload: str = payload.get("type")
             if email is None or token_type_in_payload != token_type:
                 return None
-            return TokenData(email=email)
+            return TokenData(email=email, id=user_id, name=user_name)
         except JWTError:
             return None
 
@@ -73,5 +75,11 @@ class AuthService:
         """Create new access token from refresh token."""
         token_data = AuthService.verify_token(refresh_token, "refresh")
         if token_data and token_data.email:
-            return AuthService.create_access_token(data={"sub": token_data.email})
+            return AuthService.create_access_token(
+                data={
+                    "sub": token_data.email,
+                    "user_id": token_data.id,
+                    "user_name": token_data.name,
+                }
+            )
         return None

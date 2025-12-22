@@ -1,6 +1,8 @@
-from pydantic import BaseModel, Field
-from typing import Optional
+from pydantic import BaseModel, Field, BeforeValidator
+from typing import Optional, Annotated
 from datetime import datetime
+
+PyObjectId = Annotated[str, BeforeValidator(str)]
 
 
 class UserBase(BaseModel):
@@ -18,7 +20,7 @@ class UserUpdate(BaseModel):
 
 
 class UserInDB(UserBase):
-    _id: str
+    id: Optional[PyObjectId] = Field(alias="_id", default=None)
     name: Optional[str] = None
     hashed_password: str
     createdAt: Optional[datetime] = None
@@ -34,5 +36,7 @@ class UserRead(UserBase):
     createdAt: Optional[datetime] = None
     updatedAt: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+
+class UserCurrent(UserBase):
+    id: str
+    name: Optional[str] = None

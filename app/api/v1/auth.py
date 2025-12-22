@@ -5,6 +5,7 @@ from fastapi.security import (
 )
 
 from app.schemas.auth import UserLogin, Token
+from app.schemas.user import UserRead, UserCurrent
 from app.services.user_service import UserService
 from app.services.auth_service import AuthService
 from app.api.deps import get_db
@@ -34,8 +35,13 @@ async def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    access_token = AuthService.create_access_token(data={"sub": user.email})
-    refresh_token = AuthService.create_refresh_token(data={"sub": user.email})
+    print(f"user", user)
+    access_token = AuthService.create_access_token(
+        data={"sub": user.email, "user_id": user.id, "user_name": user.name}
+    )
+    refresh_token = AuthService.create_refresh_token(
+        data={"sub": user.email, "user_id": user.id, "user_name": user.name}
+    )
 
     return Token(access_token=access_token, refresh_token=refresh_token)
 
@@ -59,14 +65,19 @@ async def refresh_token(refresh_token: str):
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
         )
 
-    new_refresh_token = AuthService.create_refresh_token(data={"sub": token_data.email})
+    new_refresh_token = AuthService.create_refresh_token(
+        data={
+            "sub": token_data.email,
+            "user_id": token_data.id,
+            "user_name": token_data.name,
+        }
+    )
 
     return Token(access_token=access_token, refresh_token=new_refresh_token)
 
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security_scheme),
-    service: UserService = Depends(get_user_service),
 ):
     """Dependency to get current authenticated user."""
     credentials_exception = HTTPException(
@@ -77,11 +88,8 @@ async def get_current_user(
     token = credentials.credentials
 
     token_data = AuthService.verify_token(token, "access")
-    if token_data is None:
+    if token_data is None or not token_data.email or not token_data.id:
         raise credentials_exception
 
-    user = await service.get_user_by_email(token_data.email)
-    if user is None:
-        raise credentials_exception
-
-    return user
+    # Return user data from token instead of querying database
+    return UserCurrent(id=token_data.id, email=token_data.email, name=token_data.name)
