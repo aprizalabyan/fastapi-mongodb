@@ -14,14 +14,14 @@ async def get_user_service(db=Depends(get_db)):
     return UserService(db)
 
 
-@router.get("/", response_model=List[UserRead])
+@router.get("", response_model=List[UserRead])
 async def list_users(
     service: UserService = Depends(get_user_service),
 ):
     return await service.list_users()
 
 
-@router.post("/", response_model=UserRead, status_code=201)
+@router.post("", response_model=UserRead, status_code=201)
 async def create_user(
     payload: UserCreate,
     service: UserService = Depends(get_user_service),

@@ -14,7 +14,7 @@ async def get_product_service(db=Depends(get_db)):
     return ProductService(db)
 
 
-@router.get("/", response_model=List[ProductRead])
+@router.get("", response_model=List[ProductRead])
 async def list_products(
     name: Optional[str] = None,
     category: Optional[str] = None,
@@ -23,7 +23,7 @@ async def list_products(
     return await service.list_products(name, category)
 
 
-@router.post("/", response_model=ProductRead, status_code=201)
+@router.post("", response_model=ProductRead, status_code=201)
 async def add_product(
     payload: ProductBase,
     service: ProductService = Depends(get_product_service),

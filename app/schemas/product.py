@@ -12,15 +12,6 @@ class ProductBase(BaseModel):
     average_rating: Optional[int] = None
 
 
-class ProductInDB(ProductBase):
-    _id: str
-    createdAt: Optional[datetime] = None
-    updatedAt: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
-
-
 class ProductRead(ProductBase):
     id: str
     createdAt: Optional[datetime] = None
