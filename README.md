@@ -77,10 +77,10 @@ uvicorn app.main:app --reload
 
 ### Users
 - `POST /api/v1/users/` - Register new user
-- `GET /api/v1/users/` - List all users (authenticated)
-- `GET /api/v1/users/{user_id}` - Get user details (authenticated)
-- `PUT /api/v1/users/{user_id}` - Update user (authenticated)
-- `DELETE /api/v1/users/{user_id}` - Delete user (authenticated)
+- `GET /api/v1/users/` - List all users
+- `GET /api/v1/users/{user_id}` - Get user details
+- `PUT /api/v1/users/{user_id}` - Update user
+- `DELETE /api/v1/users/{user_id}` - Delete user
 
 ### Products
 - `POST /api/v1/products/` - Add product
@@ -89,11 +89,12 @@ uvicorn app.main:app --reload
 - `PUT /api/v1/products/{product_id}` - Update product
 - `DELETE /api/v1/products/{product_id}` - Delete product
 
-### Reviews (Coming Soon)
-- `POST /api/v1/products/{product_id}/reviews` - Add review
-- `GET /api/v1/products/{product_id}/reviews` - Get product reviews
-- `PUT /api/v1/reviews/{review_id}` - Update review
-- `DELETE /api/v1/reviews/{review_id}` - Delete review
+### Reviews
+- `GET /api/v1/reviews` - List all reviews
+- `GET /api/v1/reviews/{product_id}` - Get reviews for a specific product
+- `POST /api/v1/reviews/{product_id}` - Create a new review with automatic product name, reviewer name, and average rating calculation
+- `PUT /api/v1/reviews/{product_id}` - Update review
+- `DELETE /api/v1/reviews/{product_id}` - Delete review
 
 ## Security Features
 
@@ -125,6 +126,22 @@ ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 REFRESH_TOKEN_EXPIRE_DAYS=7
 ```
+
+## Roadmap
+
+- [x] User authentication and authorization
+- [x] User management (CRUD)
+- [x] Product CRUD operations
+- [x] Review management system
+- [x] Review with product name and reviewer name population
+- [x] Automatic average rating calculation for products
+- [ ] Image upload for products
+- [ ] User roles and permissions
+- [ ] Advanced search and filtering
+- [ ] API rate limiting
+- [ ] Comprehensive test suite
+- [ ] Docker containerization
+- [ ] CI/CD pipeline
 
 ## License
 
