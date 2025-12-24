@@ -5,9 +5,16 @@ from fastapi.security import (
 )
 
 from app.schemas.auth import UserLogin, Token
-from app.schemas.user import UserRead, UserCurrent
+from app.schemas.user import UserRead
 from app.services.user_service import UserService
-from app.services.auth_service import AuthService
+from app.services.auth_service import (
+    AuthService,
+    TokenExpiredError,
+    TokenInvalidError,
+    TokenGenerationError,
+    RefreshTokenNotFoundError,
+    RefreshTokenExpiredError,
+)
 from app.api.deps import get_db
 
 router = APIRouter()
@@ -19,13 +26,19 @@ async def get_user_service(db=Depends(get_db)):
     return UserService(db)
 
 
+async def get_auth_service(db=Depends(get_db)):
+    """Dependency to inject database into AuthService."""
+    return AuthService(db)
+
+
 @router.post("/login", response_model=Token)
 async def login(
     user_credentials: UserLogin,
-    service: UserService = Depends(get_user_service),
+    user_service: UserService = Depends(get_user_service),
+    auth_service: AuthService = Depends(get_auth_service),
 ):
     """Login with email and password, return access and refresh tokens."""
-    user = await service.authenticate_user(
+    user = await user_service.authenticate_user(
         user_credentials.email, user_credentials.password
     )
     if not user:
@@ -35,61 +48,97 @@ async def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    print(f"user", user)
-    access_token = AuthService.create_access_token(
-        data={"sub": user.email, "user_id": user.id, "user_name": user.name}
-    )
-    refresh_token = AuthService.create_refresh_token(
-        data={"sub": user.email, "user_id": user.id, "user_name": user.name}
-    )
-
-    return Token(access_token=access_token, refresh_token=refresh_token)
+    try:
+        access_token = auth_service.create_access_token(data={"sub": str(user.id)})
+        refresh_token = await auth_service.create_refresh_token(str(user.id))
+        return Token(access_token=access_token, refresh_token=refresh_token)
+    except TokenGenerationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate authentication tokens: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Unexpected error during login: {str(e)}"
+        )
 
 
 @router.post("/refresh-token", response_model=Token)
-async def refresh_token(refresh_token: str):
+async def refresh_token(
+    refresh_token: str,
+    auth_service: AuthService = Depends(get_auth_service),
+):
     """Refresh access token using refresh token."""
-    access_token = AuthService.refresh_access_token(refresh_token)
-    if not access_token:
+    try:
+        result = await auth_service.refresh_access_token(refresh_token)
+        access_token, new_refresh_token = result
+        return Token(access_token=access_token, refresh_token=new_refresh_token)
+    except RefreshTokenNotFoundError:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token not found or invalid",
+            headers={"WWW-Authenticate": "Bearer"},
         )
-
-    # Generate new refresh token as well for security
-    # Extract email from old refresh token
-    from app.services.auth_service import AuthService
-
-    token_data = AuthService.verify_token(refresh_token, "refresh")
-    if not token_data or not token_data.email:
+    except RefreshTokenExpiredError:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token has expired",
+            headers={"WWW-Authenticate": "Bearer"},
         )
-
-    new_refresh_token = AuthService.create_refresh_token(
-        data={
-            "sub": token_data.email,
-            "user_id": token_data.id,
-            "user_name": token_data.name,
-        }
-    )
-
-    return Token(access_token=access_token, refresh_token=new_refresh_token)
+    except TokenGenerationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate new tokens: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Unexpected error during token refresh: {str(e)}"
+        )
 
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security_scheme),
+    user_service: UserService = Depends(get_user_service),
 ):
     """Dependency to get current authenticated user."""
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    token = credentials.credentials
+    try:
+        token = credentials.credentials
+        token_data = AuthService.verify_token(token, "access")
+        
+        # Get user from database
+        user = await user_service.get_user(token_data.id)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not found",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        return user  # Return UserRead instead of UserCurrent
+        
+    except TokenExpiredError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Access token has expired",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    except TokenInvalidError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Access token is invalid: {str(e)}",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Authentication failed: {str(e)}",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
-    token_data = AuthService.verify_token(token, "access")
-    if token_data is None or not token_data.email or not token_data.id:
-        raise credentials_exception
 
-    # Return user data from token instead of querying database
-    return UserCurrent(id=token_data.id, email=token_data.email, name=token_data.name)
+@router.get("/me", response_model=UserRead)
+async def get_me(current_user: UserRead = Depends(get_current_user)):
+    """Get current user details."""
+    return current_user

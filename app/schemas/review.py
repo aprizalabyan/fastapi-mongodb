@@ -20,6 +20,3 @@ class ReviewRead(ReviewBase):
     reviewer_name: Optional[str] = None
     createdAt: Optional[datetime] = None
     updatedAt: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
