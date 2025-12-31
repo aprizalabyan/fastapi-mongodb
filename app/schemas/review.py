@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 
@@ -21,3 +21,8 @@ class ReviewRead(ReviewBase):
     createdAt: Optional[datetime] = None
     updatedAt: Optional[datetime] = None
     isEditable: bool = False
+
+
+class ReviewProductResp(BaseModel):
+    average_rating: Optional[float] = 0
+    reviews: List[ReviewRead] = []

@@ -9,7 +9,7 @@ class ProductBase(BaseModel):
     price: Optional[int] = None
     stock: Optional[int] = None
     category: Optional[str] = None
-    average_rating: Optional[int] = None
+    average_rating: Optional[float] = None
 
 
 class ProductRead(ProductBase):

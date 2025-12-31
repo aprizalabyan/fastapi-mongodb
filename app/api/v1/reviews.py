@@ -1,7 +1,7 @@
 from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Depends
 
-from app.schemas.review import ReviewBase, ReviewRead, ReviewUpdate
+from app.schemas.review import ReviewBase, ReviewRead, ReviewUpdate, ReviewProductResp
 from app.services.review_service import ReviewService
 from app.api.deps import get_db
 from app.api.v1.auth import get_current_user
@@ -22,7 +22,7 @@ async def list_reviews(
     return await service.list_reviews(reviewer_id=current_user.id)
 
 
-@router.get("/{product_id}", response_model=List[ReviewRead])
+@router.get("/{product_id}", response_model=ReviewProductResp)
 async def get_product_review(
     product_id: str,
     service: ReviewService = Depends(get_review_service),

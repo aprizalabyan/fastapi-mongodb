@@ -2,7 +2,7 @@ from typing import List, Optional
 from datetime import datetime, timezone
 from bson import ObjectId
 
-from app.schemas.review import ReviewBase, ReviewRead
+from app.schemas.review import ReviewBase, ReviewRead, ReviewProductResp
 
 
 class ReviewService:
@@ -24,14 +24,27 @@ class ReviewService:
             reviews.append(self._doc_to_review_read(tr_doc))
         return reviews
 
-    async def get_product_review(self, product_id: str, reviewer_id: str) -> List[ReviewRead]:
+    async def get_product_review(
+        self, product_id: str, reviewer_id: str
+    ) -> ReviewProductResp:
         """Fetch all review by product_id from MongoDB."""
         reviews = []
         async for doc in self.db[self.collection_name].find({"product_id": product_id}):
             tr_doc = doc.copy()
             tr_doc["isEditable"] = doc["reviewer_id"] == reviewer_id
             reviews.append(self._doc_to_review_read(tr_doc))
-        return reviews
+
+        try:
+            product_oid = ObjectId(product_id)
+        except Exception:
+            raise ValueError("Invalid product_id format")
+
+        product = await self.db[self.product_collection_name].find_one(
+            {"_id": product_oid}, {"average_rating": 1, "_id": 0}
+        )
+        average_rating = product.get("average_rating", 0) if product else 0
+
+        return {"average_rating": average_rating, "reviews": reviews}
 
     async def create_review(
         self,
@@ -87,10 +100,9 @@ class ReviewService:
             raise ValueError("Invalid review_id format")
 
         # Find the review and verify ownership
-        review_doc = await self.db[self.collection_name].find_one({
-            "_id": review_oid,
-            "reviewer_id": reviewer_id
-        })
+        review_doc = await self.db[self.collection_name].find_one(
+            {"_id": review_oid, "reviewer_id": reviewer_id}
+        )
 
         if not review_doc:
             return None
@@ -100,8 +112,7 @@ class ReviewService:
         update_data["updatedAt"] = datetime.now(timezone.utc)
 
         result = await self.db[self.collection_name].update_one(
-            {"_id": review_oid},
-            {"$set": update_data}
+            {"_id": review_oid}, {"$set": update_data}
         )
 
         if result.modified_count == 0:
@@ -129,10 +140,9 @@ class ReviewService:
             raise ValueError("Invalid review_id format")
 
         # Find the review and verify ownership
-        review_doc = await self.db[self.collection_name].find_one({
-            "_id": review_oid,
-            "reviewer_id": reviewer_id
-        })
+        review_doc = await self.db[self.collection_name].find_one(
+            {"_id": review_oid, "reviewer_id": reviewer_id}
+        )
 
         if not review_doc:
             return False
@@ -172,7 +182,7 @@ class ReviewService:
             avg = result[0].get("average_rating")
             if avg is not None:
                 # Round to nearest integer
-                average_rating = round(avg)
+                average_rating = round(avg, 1)
 
         # Update product with new average rating
         await self.db[self.product_collection_name].update_one(
