@@ -62,5 +62,5 @@ async def delete_product(
     deleted = await service.delete_product(product_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Product not found")
-    # 204 No Content
-    return None
+
+    return {"message": "Review deleted successfully"}

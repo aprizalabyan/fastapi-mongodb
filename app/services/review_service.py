@@ -177,7 +177,7 @@ class ReviewService:
             await self.db[self.collection_name].aggregate(pipeline).to_list(length=1)
         )
 
-        average_rating = None
+        average_rating = 0
         if result:
             avg = result[0].get("average_rating")
             if avg is not None:
