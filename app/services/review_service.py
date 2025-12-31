@@ -15,18 +15,22 @@ class ReviewService:
         """Initialize service with database instance."""
         self.db = db
 
-    async def list_reviews(self) -> List[ReviewRead]:
+    async def list_reviews(self, reviewer_id: str) -> List[ReviewRead]:
         """Fetch all reviews from MongoDB."""
         reviews = []
         async for doc in self.db[self.collection_name].find():
-            reviews.append(self._doc_to_review_read(doc))
+            tr_doc = doc.copy()
+            tr_doc["isEditable"] = doc["reviewer_id"] == reviewer_id
+            reviews.append(self._doc_to_review_read(tr_doc))
         return reviews
 
-    async def get_product_review(self, product_id: str) -> List[ReviewRead]:
+    async def get_product_review(self, product_id: str, reviewer_id: str) -> List[ReviewRead]:
         """Fetch all review by product_id from MongoDB."""
         reviews = []
         async for doc in self.db[self.collection_name].find({"product_id": product_id}):
-            reviews.append(self._doc_to_review_read(doc))
+            tr_doc = doc.copy()
+            tr_doc["isEditable"] = doc["reviewer_id"] == reviewer_id
+            reviews.append(self._doc_to_review_read(tr_doc))
         return reviews
 
     async def create_review(

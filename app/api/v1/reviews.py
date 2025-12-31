@@ -17,16 +17,20 @@ async def get_review_service(db=Depends(get_db)):
 @router.get("", response_model=List[ReviewRead])
 async def list_reviews(
     service: ReviewService = Depends(get_review_service),
+    current_user=Depends(get_current_user),
 ):
-    return await service.list_reviews()
+    return await service.list_reviews(reviewer_id=current_user.id)
 
 
 @router.get("/{product_id}", response_model=List[ReviewRead])
 async def get_product_review(
     product_id: str,
     service: ReviewService = Depends(get_review_service),
+    current_user=Depends(get_current_user),
 ):
-    product_reviews = await service.get_product_review(product_id)
+    product_reviews = await service.get_product_review(
+        product_id, reviewer_id=current_user.id
+    )
     if not product_reviews:
         raise HTTPException(status_code=404, detail="Review for this product not found")
     return product_reviews
@@ -74,7 +78,7 @@ async def update_review(
         if not updated_review:
             raise HTTPException(
                 status_code=404,
-                detail="Review not found or you don't have permission to update it"
+                detail="Review not found or you don't have permission to update it",
             )
 
         return updated_review
@@ -98,7 +102,7 @@ async def delete_review(
         if not deleted:
             raise HTTPException(
                 status_code=404,
-                detail="Review not found or you don't have permission to delete it"
+                detail="Review not found or you don't have permission to delete it",
             )
 
         return {"message": "Review deleted successfully"}

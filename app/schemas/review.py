@@ -20,3 +20,4 @@ class ReviewRead(ReviewBase):
     reviewer_name: Optional[str] = None
     createdAt: Optional[datetime] = None
     updatedAt: Optional[datetime] = None
+    isEditable: bool = False
