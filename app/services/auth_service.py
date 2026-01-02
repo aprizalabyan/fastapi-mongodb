@@ -187,3 +187,27 @@ class AuthService:
             raise TokenGenerationError(
                 f"Unexpected error during token refresh: {str(e)}"
             )
+
+    async def revoke_refresh_token(self, refresh_token: str) -> bool:
+        """Revoke a specific refresh token."""
+        try:
+            now = datetime.now(timezone.utc)
+            result = await self.db[self.collection_name].update_one(
+                {"token": refresh_token, "revoked_at": None},
+                {"$set": {"revoked_at": now}}
+            )
+            return result.modified_count > 0
+        except Exception as e:
+            raise TokenGenerationError(f"Failed to revoke refresh token: {str(e)}")
+
+    async def revoke_all_user_refresh_tokens(self, user_id: str) -> int:
+        """Revoke all active refresh tokens for a user."""
+        try:
+            now = datetime.now(timezone.utc)
+            result = await self.db[self.collection_name].update_many(
+                {"user_id": user_id, "revoked_at": None},
+                {"$set": {"revoked_at": now}}
+            )
+            return result.modified_count
+        except Exception as e:
+            raise TokenGenerationError(f"Failed to revoke user refresh tokens: {str(e)}")

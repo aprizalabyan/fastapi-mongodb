@@ -4,7 +4,7 @@ from fastapi.security import (
     HTTPAuthorizationCredentials,
 )
 
-from app.schemas.auth import UserLogin, Token
+from app.schemas.auth import UserLogin, Token, RefreshTokenRevoke
 from app.schemas.user import UserRead
 from app.services.user_service import UserService
 from app.services.auth_service import (
@@ -142,3 +142,58 @@ async def get_current_user(
 async def get_me(current_user: UserRead = Depends(get_current_user)):
     """Get current user details."""
     return current_user
+
+
+@router.post("/logout")
+async def logout(
+    revoke_data: RefreshTokenRevoke,
+    current_user: UserRead = Depends(get_current_user),
+    auth_service: AuthService = Depends(get_auth_service),
+):
+    """Logout by revoking the specified refresh token."""
+    try:
+        # Verify that the refresh token belongs to the current user
+        doc = await auth_service.db[auth_service.collection_name].find_one(
+            {"token": revoke_data.refresh_token, "user_id": current_user.id, "revoked_at": None}
+        )
+        if not doc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Refresh token not found or already revoked"
+            )
+
+        # Revoke the refresh token
+        revoked = await auth_service.revoke_refresh_token(revoke_data.refresh_token)
+        if not revoked:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to revoke refresh token"
+            )
+
+        return {"message": "Successfully logged out", "revoked_tokens": 1}
+
+    except TokenGenerationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Logout failed: {str(e)}"
+        )
+
+
+@router.post("/logout-all")
+async def logout_all(
+    current_user: UserRead = Depends(get_current_user),
+    auth_service: AuthService = Depends(get_auth_service),
+):
+    """Logout from all devices by revoking all refresh tokens for the current user."""
+    try:
+        revoked_count = await auth_service.revoke_all_user_refresh_tokens(current_user.id)
+        return {
+            "message": "Successfully logged out from all devices",
+            "revoked_tokens": revoked_count
+        }
+
+    except TokenGenerationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Logout failed: {str(e)}"
+        )

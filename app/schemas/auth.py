@@ -26,6 +26,10 @@ class RefreshTokenInDB(BaseModel):
     revoked_at: Optional[datetime] = None
 
 
+class RefreshTokenRevoke(BaseModel):
+    refresh_token: str = Field(..., description="The refresh token to revoke")
+
+
 class UserCreateWithPassword(BaseModel):
     email: str = Field(..., example="user@example.com")
     password: str = Field(..., min_length=6, example="password123")
